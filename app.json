@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "My To-Do List",
+    "name": "Tasks",
     "slug": "todo-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
