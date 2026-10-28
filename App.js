@@ -32,6 +32,7 @@ function TodoScreen() {
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // Load saved todos from phone storage on startup
   useEffect(() => {
@@ -64,15 +65,15 @@ function TodoScreen() {
   const toggleTodo = (id) =>
     setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
 
-  const deleteTodo = (id) =>
-    Alert.alert('Delete task?', undefined, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => setTodos((prev) => prev.filter((t) => t.id !== id)),
-      },
-    ]);
+  // First tap on ✕ asks "Delete?", second tap deletes
+  const deleteTodo = (id) => {
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      return;
+    }
+    setTodos((prev) => prev.filter((t) => t.id !== id));
+    setConfirmDeleteId(null);
+  };
 
   const startEdit = (todo) => {
     setEditingId(todo.id);
@@ -120,9 +121,20 @@ function TodoScreen() {
         </Pressable>
       )}
 
-      <Pressable onPress={() => deleteTodo(item.id)} hitSlop={10}>
-        <Text style={styles.delete}>✕</Text>
-      </Pressable>
+      {confirmDeleteId === item.id ? (
+        <View style={styles.confirmRow}>
+          <Pressable onPress={() => setConfirmDeleteId(null)} hitSlop={6}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </Pressable>
+          <Pressable style={styles.confirmBtn} onPress={() => deleteTodo(item.id)}>
+            <Text style={styles.confirmText}>Delete?</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable onPress={() => deleteTodo(item.id)} hitSlop={10}>
+          <Text style={styles.delete}>✕</Text>
+        </Pressable>
+      )}
     </View>
   );
 
@@ -252,6 +264,15 @@ const styles = StyleSheet.create({
   itemTextDone: { textDecorationLine: 'line-through', color: '#9CA3AF' },
   editInput: { flex: 1, padding: 0, borderBottomWidth: 1, borderColor: ACCENT },
   delete: { fontSize: 18, color: '#EF4444', marginLeft: 12 },
+  confirmRow: { flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
+  cancelText: { color: '#6B7280', fontWeight: '500', marginRight: 10 },
+  confirmBtn: {
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  confirmText: { color: '#fff', fontWeight: '600' },
   empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 40, fontSize: 16 },
   clearBtn: { alignSelf: 'center', padding: 10 },
   clearText: { color: '#EF4444', fontWeight: '600' },
