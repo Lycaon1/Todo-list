@@ -165,8 +165,11 @@ function reducer(state, action) {
   }
 }
 
-function isValid(state) {
-  return state && Array.isArray(state.lists) && state.lists.length > 0 && Array.isArray(state.tasks);
+// Returns a usable task state from saved data, or null if it is not task data
+export function normalizeTaskState(saved) {
+  if (!saved || !Array.isArray(saved.lists) || !saved.lists.length || !Array.isArray(saved.tasks)) return null;
+  const selectedExists = saved.selected === STARRED || saved.lists.some((l) => l.id === saved.selected);
+  return { ...saved, selected: selectedExists ? saved.selected : saved.lists[0].id };
 }
 
 export function useTaskStore() {
@@ -178,11 +181,8 @@ export function useTaskStore() {
       try {
         const json = await AsyncStorage.getItem(STORAGE_KEY);
         if (json) {
-          const saved = JSON.parse(json);
-          if (isValid(saved)) {
-            const selectedExists = saved.selected === STARRED || saved.lists.some((l) => l.id === saved.selected);
-            dispatch({ type: 'LOAD', state: { ...saved, selected: selectedExists ? saved.selected : saved.lists[0].id } });
-          }
+          const saved = normalizeTaskState(JSON.parse(json));
+          if (saved) dispatch({ type: 'LOAD', state: saved });
         } else {
           const legacy = await AsyncStorage.getItem(LEGACY_KEY);
           if (legacy) dispatch({ type: 'LOAD', state: migrateLegacy(JSON.parse(legacy)) });

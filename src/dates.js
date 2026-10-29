@@ -95,3 +95,11 @@ export function dateGroupLabel(due) {
   if (!due) return 'No due date';
   return dayDiff(due) < 0 ? 'Past' : formatDate(due);
 }
+
+// 'Jan 5, 2027' style, used for lease dates and records
+export function formatLongDate(key) {
+  const d = fromKey(key);
+  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+export const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 
-export default function Snackbar({ snack, onUndo, onDismiss }) {
+export default function Snackbar({ snack, onUndo, onDismiss, bottomOffset = 0 }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -15,12 +15,14 @@ export default function Snackbar({ snack, onUndo, onDismiss }) {
 
   if (!snack) return null;
   return (
-    <View style={[styles.wrap, { bottom: insets.bottom + 16 }]} pointerEvents="box-none">
+    <View style={[styles.wrap, { bottom: insets.bottom + 16 + bottomOffset }]} pointerEvents="box-none">
       <View style={[styles.bar, { backgroundColor: theme.snackbar }]}>
         <Text style={[styles.message, { color: theme.snackbarText }]}>{snack.message}</Text>
-        <Pressable onPress={onUndo} hitSlop={8}>
-          <Text style={[styles.action, { color: theme.snackbarAction }]}>Undo</Text>
-        </Pressable>
+        {!!snack.undo && (
+          <Pressable onPress={onUndo} hitSlop={8}>
+            <Text style={[styles.action, { color: theme.snackbarAction }]}>Undo</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );

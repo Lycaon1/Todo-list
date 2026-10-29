@@ -61,7 +61,8 @@ function TimeEditor({ time, onChange }) {
   );
 }
 
-export default function DatePickerDialog({ due, time, repeat, onDone, onClose }) {
+// dateOnly hides the time and repeat options (used for forms like lease dates)
+export default function DatePickerDialog({ due, time = null, repeat = null, dateOnly, onDone, onClose }) {
   const theme = useTheme();
   const today = todayKey();
   const [selected, setSelected] = useState(due ?? today);
@@ -96,12 +97,22 @@ export default function DatePickerDialog({ due, time, repeat, onDone, onClose })
         <Text style={[styles.monthLabel, { color: theme.text }]}>
           {MONTHS_LONG[month.getMonth()]} {month.getFullYear()}
         </Text>
+        {dateOnly && (
+          <Pressable onPress={() => shiftMonth(-12)} hitSlop={8} style={styles.monthBtn} accessibilityLabel="Previous year">
+            <MaterialIcons name="keyboard-double-arrow-left" size={22} color={theme.textSecondary} />
+          </Pressable>
+        )}
         <Pressable onPress={() => shiftMonth(-1)} hitSlop={8} style={styles.monthBtn} accessibilityLabel="Previous month">
           <MaterialIcons name="chevron-left" size={24} color={theme.textSecondary} />
         </Pressable>
         <Pressable onPress={() => shiftMonth(1)} hitSlop={8} style={styles.monthBtn} accessibilityLabel="Next month">
           <MaterialIcons name="chevron-right" size={24} color={theme.textSecondary} />
         </Pressable>
+        {dateOnly && (
+          <Pressable onPress={() => shiftMonth(12)} hitSlop={8} style={styles.monthBtn} accessibilityLabel="Next year">
+            <MaterialIcons name="keyboard-double-arrow-right" size={22} color={theme.textSecondary} />
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.grid}>
@@ -137,6 +148,8 @@ export default function DatePickerDialog({ due, time, repeat, onDone, onClose })
         })}
       </View>
 
+      {!dateOnly && (
+        <>
       <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
       <Pressable
@@ -183,6 +196,8 @@ export default function DatePickerDialog({ due, time, repeat, onDone, onClose })
             );
           })}
         </View>
+      )}
+        </>
       )}
     </Dialog>
   );

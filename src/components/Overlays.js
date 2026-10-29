@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   BackHandler,
@@ -16,11 +16,20 @@ import { noOutline, useTheme } from '../theme';
 
 const useNativeDriver = Platform.OS !== 'web';
 
+// Lets the app hide the bottom tab bar while a sheet or dialog is open
+export const OverlayCountContext = createContext(() => {});
+
 // Full-screen layer with a dimmed backdrop. Rendered inside the app's own view
 // so it behaves the same on Android, iOS and web.
 function Overlay({ onClose, center, children }) {
   const theme = useTheme();
   const fade = useRef(new Animated.Value(0)).current;
+  const reportOverlay = useContext(OverlayCountContext);
+
+  useEffect(() => {
+    reportOverlay(1);
+    return () => reportOverlay(-1);
+  }, [reportOverlay]);
 
   useEffect(() => {
     Animated.timing(fade, { toValue: 1, duration: 180, useNativeDriver }).start();
