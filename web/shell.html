@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>Tasks</title>
+    <meta name="theme-color" content="#F0F4F9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#131314" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Tasks" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <style>
+      html, body { height: 100%; margin: 0; background: #F0F4F9; }
+      @media (prefers-color-scheme: dark) { html, body { background: #131314; } }
+      body { overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+      #root { display: flex; height: 100%; min-width: 0; }
+    </style>
+  </head>
+  <body>
+    <noscript>Turn on JavaScript to use this app.</noscript>
+    <div id="root"></div>
+    <script>
+      // Keep working offline, and ask the browser not to clear saved tasks
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function () {});
+        });
+      }
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
+    </script>
+    <script>
+/*APP_BUNDLE*/
+    </script>
+  </body>
+</html>
