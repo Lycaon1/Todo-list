@@ -1,14 +1,15 @@
 import { fromKey, todayKey } from '../../dates';
 import { EVENT_CATEGORIES, EVENT_REPEATS } from '../../calendarStore';
+import { REMINDER_OPTIONS } from '../../reminders';
 
 // Works for saved events (id), new events (date) and not-yet-saved dictated drafts (draft + onDraftSave)
-export function buildEventForm({ id, date, draft, onDraftSave }, { calendar, dispatch }) {
+export function buildEventForm({ id, date, draft, onDraftSave }, { calendar, dispatch, settings }) {
   const item = id ? calendar.events.find((e) => e.id === id) : null;
   const base = item ?? draft ?? { date: date ?? todayKey(), category: 'event' };
 
   return {
     title: item ? 'Edit event' : draft ? 'Check event' : 'New event',
-    initial: { ...base, repeat: base.repeat ?? '', interval: Number(base.interval) || 1 },
+    initial: { ...base, repeat: base.repeat ?? '', interval: Number(base.interval) || 1, reminders: base.reminders ?? settings.defaultReminders },
     fields: [
       { key: 'title', label: 'Title', required: true, placeholder: "e.g. Mom's birthday, Soccer practice" },
       { key: 'category', label: 'Type', type: 'select', options: EVENT_CATEGORIES },
@@ -35,6 +36,13 @@ export function buildEventForm({ id, date, draft, onDraftSave }, { calendar, dis
         hint: 'Optional. Shows their age or how many years it has been.',
         visibleIf: (v) => v.category === 'birthday' || v.category === 'anniversary',
       },
+      {
+        key: 'reminders',
+        label: 'Remind me',
+        type: 'multi',
+        options: REMINDER_OPTIONS,
+        hint: 'All-day events are reminded at 9 AM the day before and on the day',
+      },
       { key: 'notes', label: 'Notes', type: 'multiline' },
     ],
     onSave: (v) => {
@@ -47,6 +55,10 @@ export function buildEventForm({ id, date, draft, onDraftSave }, { calendar, dis
       }
       if (!values.repeat) values.until = null;
       if (!values.time) values.endTime = null;
+      // Matching the defaults means "follow the defaults", so later changes to them apply here too
+      const sameAsDefault =
+        values.reminders.length === settings.defaultReminders.length && values.reminders.every((r) => settings.defaultReminders.includes(r));
+      if (sameAsDefault) values.reminders = null;
       if (draft) onDraftSave({ ...draft, ...values, missingDate: false });
       else if (item) dispatch({ type: 'UPDATE', id: item.id, changes: values });
       else dispatch({ type: 'ADD', items: [values] });

@@ -1,5 +1,5 @@
 // Offline support: serve the app from the phone's cache, refresh it in the background when online
-const CACHE = 'tasks-8e9198ad2045';
+const CACHE = 'tasks-72527a15e146';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

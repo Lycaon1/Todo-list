@@ -4,6 +4,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { formatLongDate, plural, toKey } from '../dates';
 import { currencySymbol } from '../money';
 import { CURRENCIES } from '../settingsStore';
+import { REMINDER_OPTIONS, reminderSummary } from '../reminders';
+import { remindersSupported } from '../notifications';
 import { buildBackup, backupFileName, parseBackup } from '../backupFormat';
 import { pickBackupFile, saveBackupFile } from '../backup';
 import { useTheme } from '../theme';
@@ -16,7 +18,89 @@ export function backupIsStale(settings) {
   return !settings.lastBackupAt || Date.now() - settings.lastBackupAt > BACKUP_STALE_MS;
 }
 
-export default function More({ tasks, properties, calendar, settings, settingsDispatch, onRestore, showMessage }) {
+export function buildReminderForm(settings, settingsDispatch) {
+  return {
+    title: 'Reminders',
+    initial: { remindersOn: settings.remindersOn, defaultReminders: settings.defaultReminders },
+    fields: [
+      { key: 'remindersOn', label: 'Send reminders', type: 'toggle', hint: 'Alerts for calendar events and tasks with a due date' },
+      {
+        key: 'defaultReminders',
+        label: 'Default reminder times',
+        type: 'multi',
+        options: REMINDER_OPTIONS,
+        hint: 'Used for new events and tasks. You can change them for each event too.',
+      },
+    ],
+    onSave: (v) => settingsDispatch({ type: 'SET', changes: v }),
+  };
+}
+
+function RemindersCard({ settings, status, onTurnOn, onOpenSettings }) {
+  const theme = useTheme();
+  let body;
+  if (!remindersSupported) {
+    body = (
+      <Text style={[styles.body, { color: theme.textSecondary }]}>
+        Reminders need the installed app. Phones don't let home-screen web apps send alerts while they're closed.
+      </Text>
+    );
+  } else if (status.permission === 'denied') {
+    body = (
+      <Text style={[styles.body, { color: theme.danger }]}>
+        Notifications are turned off for this app. Turn them on in your phone's Settings, under Notifications, then Anjali's World.
+      </Text>
+    );
+  } else if (status.permission !== 'granted') {
+    body = (
+      <>
+        <Text style={[styles.body, { color: theme.textSecondary }]}>Get alerts before your events, even when the app is closed.</Text>
+        <View style={styles.buttons}>
+          <Button label="Turn on reminders" icon="notifications-active" onPress={onTurnOn} />
+        </View>
+      </>
+    );
+  } else {
+    body = (
+      <>
+        <InfoRow
+          icon="schedule"
+          label="Default reminders"
+          value={settings.remindersOn ? reminderSummary(settings.defaultReminders) : 'Off'}
+          onPress={onOpenSettings}
+        />
+        {settings.remindersOn && (
+          <Text style={[styles.body, { color: theme.muted }]}>
+            {plural(status.scheduled, 'alert')} scheduled for the next 30 days.
+            {status.scheduled >= 60 ? ' Your iPhone holds 60 at a time; the app adds more each time you open it.' : ''}
+          </Text>
+        )}
+      </>
+    );
+  }
+  return (
+    <Card>
+      <View style={styles.cardHead}>
+        <MaterialIcons name="notifications-active" size={24} color={theme.primary} />
+        <Text style={[styles.cardTitle, { color: theme.text }]}>Reminders</Text>
+      </View>
+      {body}
+    </Card>
+  );
+}
+
+export default function More({
+  tasks,
+  properties,
+  calendar,
+  settings,
+  settingsDispatch,
+  onRestore,
+  showMessage,
+  reminderStatus,
+  onTurnOnReminders,
+  nav,
+}) {
   const theme = useTheme();
   const [pendingRestore, setPendingRestore] = useState(null);
   const [error, setError] = useState(null);
@@ -72,6 +156,13 @@ export default function More({ tasks, properties, calendar, settings, settingsDi
             <Button label="Restore" icon="restore" variant="outlined" onPress={restore} />
           </View>
         </Card>
+
+        <RemindersCard
+          settings={settings}
+          status={reminderStatus}
+          onTurnOn={onTurnOnReminders}
+          onOpenSettings={() => nav.push('form', { kind: 'reminders' })}
+        />
 
         <Card>
           <View style={styles.cardHead}>

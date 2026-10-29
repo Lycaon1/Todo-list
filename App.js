@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Platform, StyleSheet, View } from 'react-native';
+import { AppState, BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { uid, useTaskStore } from './src/store';
@@ -9,7 +9,7 @@ import { useSettingsStore } from './src/settingsStore';
 import { useTheme } from './src/theme';
 import Home from './src/screens/Home';
 import TaskDetail from './src/screens/TaskDetail';
-import More, { backupIsStale } from './src/screens/More';
+import More, { backupIsStale, buildReminderForm } from './src/screens/More';
 import PropertiesHome from './src/screens/properties/PropertiesHome';
 import PropertyDetail from './src/screens/properties/PropertyDetail';
 import TenantDetail from './src/screens/properties/TenantDetail';
@@ -21,6 +21,14 @@ import FormScreen from './src/components/FormScreen';
 import Snackbar from './src/components/Snackbar';
 import TabBar from './src/components/TabBar';
 import { OverlayCountContext } from './src/components/Overlays';
+import { upcomingReminders } from './src/reminders';
+import {
+  cancelReminders,
+  getReminderPermission,
+  remindersSupported,
+  requestReminderPermission,
+  scheduleReminders,
+} from './src/notifications';
 
 const TAB_BAR_HEIGHT = 70;
 const FORM_COLLECTIONS = {
@@ -45,8 +53,8 @@ function Root() {
   const insets = useSafeAreaInsets();
   const [tasks, taskDispatch, tasksLoaded] = useTaskStore();
   const [properties, propertyDispatch] = usePropertyStore();
-  const [calendar, calendarDispatch] = useCalendarStore();
-  const [settings, settingsDispatch] = useSettingsStore();
+  const [calendar, calendarDispatch, calendarLoaded] = useCalendarStore();
+  const [settings, settingsDispatch, settingsLoaded] = useSettingsStore();
   const [tab, setTab] = useState('tasks');
   const [stack, setStack] = useState([]); // screens opened on top of the tabs: [{ key, name, params }]
   const [overlayCount, setOverlayCount] = useState(0);
@@ -99,6 +107,50 @@ function Root() {
     if (stack.some((r) => !routeIsValid(r))) setStack((s) => s.filter(routeIsValid));
   }, [stack, routeIsValid]);
 
+  // ---- Reminders: keep the phone's scheduled alerts in step with events and tasks ----
+  const [reminderStatus, setReminderStatus] = useState({
+    permission: remindersSupported ? 'undetermined' : 'unsupported',
+    scheduled: 0,
+  });
+  const [appOpenedAt, setAppOpenedAt] = useState(Date.now());
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => state === 'active' && setAppOpenedAt(Date.now()));
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    if (!remindersSupported || !tasksLoaded || !calendarLoaded || !settingsLoaded) return undefined;
+    // Wait for typing to settle before rescheduling
+    const timer = setTimeout(async () => {
+      try {
+        let permission = await getReminderPermission();
+        const hasDates = calendar.events.length > 0 || tasks.tasks.some((t) => t.due && !t.done);
+        if (permission === 'undetermined' && settings.remindersOn && !settings.askedForReminders && hasDates) {
+          settingsDispatch({ type: 'SET', changes: { askedForReminders: true } });
+          permission = await requestReminderPermission();
+        }
+        let scheduled = 0;
+        if (!settings.remindersOn) await cancelReminders();
+        else if (permission === 'granted') {
+          scheduled = await scheduleReminders(
+            upcomingReminders({ events: calendar.events, tasks: tasks.tasks, defaults: settings.defaultReminders })
+          );
+        }
+        setReminderStatus({ permission, scheduled });
+      } catch {
+        // Scheduling failed; it is retried on the next change or app open
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [calendar, tasks, settings, tasksLoaded, calendarLoaded, settingsLoaded, appOpenedAt, settingsDispatch]);
+
+  const turnOnReminders = async () => {
+    const permission = await requestReminderPermission();
+    settingsDispatch({ type: 'SET', changes: { askedForReminders: true, remindersOn: true } });
+    setReminderStatus((s) => ({ ...s, permission }));
+  };
+
   const taskActions = {
     toggleDone: (task) => {
       const before = tasks.tasks;
@@ -136,10 +188,10 @@ function Root() {
       case 'vendors':
         return <Vendors data={properties} nav={nav} />;
       case 'form': {
-        const form =
-          params.kind === 'event'
-            ? buildEventForm(params, { calendar, dispatch: calendarDispatch })
-            : buildForm(params, { data: properties, dispatch: propertyDispatch, settings });
+        let form;
+        if (params.kind === 'event') form = buildEventForm(params, { calendar, dispatch: calendarDispatch, settings });
+        else if (params.kind === 'reminders') form = buildReminderForm(settings, settingsDispatch);
+        else form = buildForm(params, { data: properties, dispatch: propertyDispatch, settings });
         return form && <FormScreen {...form} onClose={nav.pop} />;
       }
       default:
@@ -194,6 +246,9 @@ function Root() {
                 settingsDispatch={settingsDispatch}
                 onRestore={restore}
                 showMessage={showMessage}
+                reminderStatus={reminderStatus}
+                onTurnOnReminders={turnOnReminders}
+                nav={nav}
               />
             </View>
           </View>

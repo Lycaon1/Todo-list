@@ -10,11 +10,11 @@ import { ConfirmDialog, TextButton } from './Overlays';
 import { Button, TopBar } from './ui';
 
 // fields: [{ key, label, type, required, placeholder, options, prefix, hint, visibleIf(values) }]
-// types: text | multiline | phone | email | number | money | date | time | weekdays | select | toggle
+// types: text | multiline | phone | email | number | money | date | time | weekdays | select | multi | toggle
 const KEYBOARDS = { phone: 'phone-pad', email: 'email-address', number: 'number-pad', money: 'decimal-pad' };
 
 function toInput(field, value) {
-  if (field.type === 'weekdays') return Array.isArray(value) ? value : [];
+  if (field.type === 'weekdays' || field.type === 'multi') return Array.isArray(value) ? value : [];
   if (value === null || value === undefined) return field.type === 'toggle' ? false : '';
   if (field.type === 'number' || field.type === 'money') return String(value);
   return value;
@@ -24,6 +24,7 @@ function fromInput(field, value) {
   if (field.type === 'number' || field.type === 'money') return parseAmount(value);
   if (field.type === 'toggle') return !!value;
   if (field.type === 'weekdays') return value.length ? [...value].sort() : null;
+  if (field.type === 'multi') return [...value];
   if (typeof value === 'string') return value.trim() || null;
   return value ?? null;
 }
@@ -72,15 +73,20 @@ export default function FormScreen({ title, fields, initial = {}, onSave, onClos
     );
     let control;
 
-    if (f.type === 'select') {
+    if (f.type === 'select' || f.type === 'multi') {
+      const multi = f.type === 'multi';
+      const toggle = (value) => {
+        const current = values[f.key];
+        set(f.key, current.includes(value) ? current.filter((v) => v !== value) : [...current, value]);
+      };
       control = (
         <View style={styles.options}>
           {f.options.map((o) => {
-            const active = values[f.key] === o.value;
+            const active = multi ? values[f.key].includes(o.value) : values[f.key] === o.value;
             return (
               <Pressable
                 key={String(o.value)}
-                onPress={() => set(f.key, o.value)}
+                onPress={() => (multi ? toggle(o.value) : set(f.key, o.value))}
                 style={[
                   styles.option,
                   { borderColor: active ? theme.primaryContainer : theme.outline },

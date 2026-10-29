@@ -1,4 +1,5 @@
 import { usePersistentReducer } from './storage';
+import { DEFAULT_REMINDERS } from './reminders';
 
 export const CURRENCIES = [
   { value: 'USD', label: 'US dollar' },
@@ -25,7 +26,13 @@ function guessCurrency() {
   }
 }
 
-const createInitial = () => ({ currency: guessCurrency(), lastBackupAt: null });
+const createInitial = () => ({
+  currency: guessCurrency(),
+  lastBackupAt: null,
+  remindersOn: true,
+  defaultReminders: DEFAULT_REMINDERS,
+  askedForReminders: false,
+});
 
 export function normalizeSettings(saved) {
   if (!saved || typeof saved !== 'object') return null;
