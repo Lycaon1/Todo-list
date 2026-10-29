@@ -177,7 +177,7 @@ export default function Home({ state, dispatch, loaded, actions, onOpenTask }) {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.bg, paddingTop: insets.top }]}>
-      <Text style={[styles.appTitle, { color: theme.text }]}>Tasks</Text>
+      <Text style={[styles.appTitle, { color: theme.text }]}>Anjali's World</Text>
 
       <ScrollView
         horizontal

@@ -1,6 +1,6 @@
 {
-  "name": "Tasks",
-  "short_name": "Tasks",
+  "name": "Anjali's World",
+  "short_name": "Anjali's World",
   "description": "Tasks and lists, stored only on this device.",
   "start_url": "./",
   "scope": "./",
