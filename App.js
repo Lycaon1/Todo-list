@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { uid, useTaskStore } from './src/store';
 import { usePropertyStore } from './src/propertyStore';
+import { useCalendarStore } from './src/calendarStore';
 import { useSettingsStore } from './src/settingsStore';
 import { useTheme } from './src/theme';
 import Home from './src/screens/Home';
@@ -14,6 +15,8 @@ import PropertyDetail from './src/screens/properties/PropertyDetail';
 import TenantDetail from './src/screens/properties/TenantDetail';
 import Vendors from './src/screens/properties/Vendors';
 import { buildForm } from './src/screens/properties/forms';
+import CalendarScreen from './src/screens/calendar/CalendarScreen';
+import { buildEventForm } from './src/screens/calendar/eventForm';
 import FormScreen from './src/components/FormScreen';
 import Snackbar from './src/components/Snackbar';
 import TabBar from './src/components/TabBar';
@@ -42,6 +45,7 @@ function Root() {
   const insets = useSafeAreaInsets();
   const [tasks, taskDispatch, tasksLoaded] = useTaskStore();
   const [properties, propertyDispatch] = usePropertyStore();
+  const [calendar, calendarDispatch] = useCalendarStore();
   const [settings, settingsDispatch] = useSettingsStore();
   const [tab, setTab] = useState('tasks');
   const [stack, setStack] = useState([]); // screens opened on top of the tabs: [{ key, name, params }]
@@ -85,10 +89,11 @@ function Root() {
       if (name === 'task') return tasks.tasks.some((t) => t.id === params.id);
       if (name === 'property') return properties.properties.some((p) => p.id === params.id);
       if (name === 'tenant') return properties.tenants.some((t) => t.id === params.id);
+      if (name === 'form' && params.id && params.kind === 'event') return calendar.events.some((e) => e.id === params.id);
       if (name === 'form' && params.id) return properties[FORM_COLLECTIONS[params.kind]].some((x) => x.id === params.id);
       return true;
     },
-    [tasks, properties]
+    [tasks, properties, calendar]
   );
   useEffect(() => {
     if (stack.some((r) => !routeIsValid(r))) setStack((s) => s.filter(routeIsValid));
@@ -111,6 +116,7 @@ function Root() {
   const restore = (backup) => {
     taskDispatch({ type: 'LOAD', state: backup.tasks });
     propertyDispatch({ type: 'LOAD', state: backup.properties });
+    calendarDispatch({ type: 'LOAD', state: backup.calendar });
     if (backup.settings.currency) settingsDispatch({ type: 'SET', changes: { currency: backup.settings.currency } });
     setStack([]);
   };
@@ -130,7 +136,10 @@ function Root() {
       case 'vendors':
         return <Vendors data={properties} nav={nav} />;
       case 'form': {
-        const form = buildForm(params, { data: properties, dispatch: propertyDispatch, settings });
+        const form =
+          params.kind === 'event'
+            ? buildEventForm(params, { calendar, dispatch: calendarDispatch })
+            : buildForm(params, { data: properties, dispatch: propertyDispatch, settings });
         return form && <FormScreen {...form} onClose={nav.pop} />;
       }
       default:
@@ -138,9 +147,10 @@ function Root() {
     }
   };
 
-  const hasData = tasks.tasks.length > 0 || properties.properties.length > 0;
+  const hasData = tasks.tasks.length > 0 || properties.properties.length > 0 || calendar.events.length > 0;
   const tabs = [
     { key: 'tasks', label: 'Tasks', icon: 'task-alt' },
+    { key: 'calendar', label: 'Calendar', icon: 'calendar-month' },
     { key: 'properties', label: 'Properties', icon: 'apartment' },
     { key: 'more', label: 'More', icon: 'more-horiz', badge: hasData && backupIsStale(settings) },
   ];
@@ -162,6 +172,16 @@ function Root() {
                 onOpenTask={(id) => nav.push('task', { id })}
               />
             </View>
+            <View style={[styles.root, tab !== 'calendar' && styles.hidden]}>
+              <CalendarScreen
+                calendar={calendar}
+                calendarDispatch={calendarDispatch}
+                tasks={tasks}
+                properties={properties}
+                nav={nav}
+                showMessage={showMessage}
+              />
+            </View>
             <View style={[styles.root, tab !== 'properties' && styles.hidden]}>
               <PropertiesHome data={properties} settings={settings} nav={nav} />
             </View>
@@ -169,6 +189,7 @@ function Root() {
               <More
                 tasks={tasks}
                 properties={properties}
+                calendar={calendar}
                 settings={settings}
                 settingsDispatch={settingsDispatch}
                 onRestore={restore}

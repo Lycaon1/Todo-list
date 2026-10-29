@@ -16,7 +16,7 @@ export function backupIsStale(settings) {
   return !settings.lastBackupAt || Date.now() - settings.lastBackupAt > BACKUP_STALE_MS;
 }
 
-export default function More({ tasks, properties, settings, settingsDispatch, onRestore, showMessage }) {
+export default function More({ tasks, properties, calendar, settings, settingsDispatch, onRestore, showMessage }) {
   const theme = useTheme();
   const [pendingRestore, setPendingRestore] = useState(null);
   const [error, setError] = useState(null);
@@ -24,7 +24,7 @@ export default function More({ tasks, properties, settings, settingsDispatch, on
   const stale = backupIsStale(settings);
 
   const backup = () => {
-    saveBackupFile(backupFileName(), buildBackup({ tasks, properties, settings }))
+    saveBackupFile(backupFileName(), buildBackup({ tasks, properties, calendar, settings }))
       .then((result) => {
         if (result !== 'saved') return;
         settingsDispatch({ type: 'SET', changes: { lastBackupAt: Date.now() } });
@@ -95,7 +95,8 @@ export default function More({ tasks, properties, settings, settingsDispatch, on
             Everything you enter is stored only on this phone. Nothing is uploaded to the internet.
           </Text>
           <Text style={[styles.body, { color: theme.muted }]}>
-            {plural(taskCount, 'open task')} · {plural(properties.properties.length, 'property', 'properties')} ·{' '}
+            {plural(taskCount, 'open task')} · {plural(calendar.events.length, 'event')} ·{' '}
+            {plural(properties.properties.length, 'property', 'properties')} ·{' '}
             {plural(properties.tenants.filter((t) => !t.movedOut).length, 'tenant')}
           </Text>
         </Card>
@@ -119,7 +120,7 @@ export default function More({ tasks, properties, settings, settingsDispatch, on
           title="Replace all data?"
           message={`This replaces everything in the app with the backup from ${
             pendingRestore.exportedAt ? formatLongDate(toKey(new Date(pendingRestore.exportedAt))) : 'this file'
-          }: ${plural(pendingRestore.tasks.tasks.length, 'task')} and ${plural(pendingRestore.properties.properties.length, 'property', 'properties')}. Anything added after that backup will be lost.`}
+          }: ${plural(pendingRestore.tasks.tasks.length, 'task')}, ${plural(pendingRestore.calendar.events.length, 'calendar event')} and ${plural(pendingRestore.properties.properties.length, 'property', 'properties')}. Anything added after that backup will be lost.`}
           confirmLabel="Restore"
           onConfirm={() => {
             onRestore(pendingRestore);

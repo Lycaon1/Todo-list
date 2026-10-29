@@ -2,18 +2,19 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { formatDate } from '../dates';
+import { DAYS_SHORT, formatDate, formatTime } from '../dates';
 import { parseAmount } from '../money';
 import { noOutline, useTheme } from '../theme';
-import DatePickerDialog from './DatePicker';
+import DatePickerDialog, { TimePickerDialog } from './DatePicker';
 import { ConfirmDialog, TextButton } from './Overlays';
 import { Button, TopBar } from './ui';
 
 // fields: [{ key, label, type, required, placeholder, options, prefix, hint, visibleIf(values) }]
-// types: text | multiline | phone | email | number | money | date | select | toggle
+// types: text | multiline | phone | email | number | money | date | time | weekdays | select | toggle
 const KEYBOARDS = { phone: 'phone-pad', email: 'email-address', number: 'number-pad', money: 'decimal-pad' };
 
 function toInput(field, value) {
+  if (field.type === 'weekdays') return Array.isArray(value) ? value : [];
   if (value === null || value === undefined) return field.type === 'toggle' ? false : '';
   if (field.type === 'number' || field.type === 'money') return String(value);
   return value;
@@ -22,6 +23,7 @@ function toInput(field, value) {
 function fromInput(field, value) {
   if (field.type === 'number' || field.type === 'money') return parseAmount(value);
   if (field.type === 'toggle') return !!value;
+  if (field.type === 'weekdays') return value.length ? [...value].sort() : null;
   if (typeof value === 'string') return value.trim() || null;
   return value ?? null;
 }
@@ -34,6 +36,7 @@ export default function FormScreen({ title, fields, initial = {}, onSave, onClos
   );
   const [errors, setErrors] = useState({});
   const [dateKey, setDateKey] = useState(null);
+  const [timeKey, setTimeKey] = useState(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const set = (key, value) => {
@@ -106,6 +109,45 @@ export default function FormScreen({ title, fields, initial = {}, onSave, onClos
           />
         </View>
       );
+    } else if (f.type === 'weekdays') {
+      const selected = values[f.key];
+      control = (
+        <View style={styles.options}>
+          {DAYS_SHORT.map((name, day) => {
+            const active = selected.includes(day);
+            return (
+              <Pressable
+                key={name}
+                onPress={() => set(f.key, active ? selected.filter((d) => d !== day) : [...selected, day])}
+                accessibilityLabel={name}
+                accessibilityState={{ selected: active }}
+                style={[
+                  styles.dayChip,
+                  { borderColor: active ? theme.primary : theme.outline },
+                  active && { backgroundColor: theme.primary },
+                ]}
+              >
+                <Text style={{ color: active ? theme.onPrimary : theme.textSecondary, fontWeight: '600' }}>{name.charAt(0)}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      );
+    } else if (f.type === 'time') {
+      const v = values[f.key];
+      control = (
+        <View style={[styles.inputBox, { borderColor }]}>
+          <Pressable style={styles.dateValue} onPress={() => setTimeKey(f.key)}>
+            <MaterialIcons name="access-time" size={20} color={theme.textSecondary} />
+            <Text style={{ color: v ? theme.text : theme.muted, fontSize: 16 }}>{v ? formatTime(v) : f.placeholder || 'Select time'}</Text>
+          </Pressable>
+          {!!v && (
+            <Pressable onPress={() => set(f.key, '')} hitSlop={8} accessibilityLabel={`Clear ${f.label}`}>
+              <MaterialIcons name="close" size={20} color={theme.textSecondary} />
+            </Pressable>
+          )}
+        </View>
+      );
     } else if (f.type === 'date') {
       const v = values[f.key];
       control = (
@@ -169,6 +211,9 @@ export default function FormScreen({ title, fields, initial = {}, onSave, onClos
           onClose={() => setDateKey(null)}
         />
       )}
+      {timeKey && (
+        <TimePickerDialog time={values[timeKey] || null} onDone={(t) => set(timeKey, t ?? '')} onClose={() => setTimeKey(null)} />
+      )}
       {confirmingDelete && (
         <ConfirmDialog
           title={`${deleteLabel}?`}
@@ -199,6 +244,7 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, marginTop: 4 },
   dateValue: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  dayChip: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   option: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   toggleLabel: { fontSize: 16 },

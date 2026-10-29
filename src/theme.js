@@ -30,6 +30,16 @@ const light = {
   snackbar: '#303030',
   snackbarText: '#F2F2F2',
   snackbarAction: '#A8C7FA',
+  categories: {
+    event: '#0B57D0',
+    birthday: '#C5221F',
+    anniversary: '#9334E6',
+    appointment: '#188038',
+    kids: '#E37400',
+    property: '#5F6368',
+    task: '#1A73E8',
+    lease: '#B06000',
+  },
 };
 
 const dark = {
@@ -62,6 +72,16 @@ const dark = {
   snackbar: '#E3E3E3',
   snackbarText: '#1F1F1F',
   snackbarAction: '#0B57D0',
+  categories: {
+    event: '#A8C7FA',
+    birthday: '#F28B82',
+    anniversary: '#D7AEFB',
+    appointment: '#81C995',
+    kids: '#FDD663',
+    property: '#BDC1C6',
+    task: '#8AB4F8',
+    lease: '#FCAD70',
+  },
 };
 
 export function useTheme() {

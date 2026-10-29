@@ -18,7 +18,7 @@ function buildMonth(month) {
   return cells;
 }
 
-function TimeEditor({ time, onChange }) {
+export function TimeEditor({ time, onChange }) {
   const theme = useTheme();
   const [h, m] = (time ?? '09:00').split(':').map(Number);
   const set = (hours, minutes) => onChange(`${pad((hours + 24) % 24)}:${pad((minutes + 60) % 60)}`);
@@ -222,3 +222,34 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 8, paddingLeft: 38 },
   chip: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
 });
+
+export function TimePickerDialog({ time, onDone, onClose }) {
+  const [picked, setPicked] = useState(time || '09:00');
+  return (
+    <Dialog
+      title={formatTime(picked)}
+      onClose={onClose}
+      actions={
+        <>
+          <TextButton
+            label="No time"
+            onPress={() => {
+              onClose();
+              onDone(null);
+            }}
+          />
+          <TextButton label="Cancel" onPress={onClose} />
+          <TextButton
+            label="Done"
+            onPress={() => {
+              onClose();
+              onDone(picked);
+            }}
+          />
+        </>
+      }
+    >
+      <TimeEditor time={picked} onChange={setPicked} />
+    </Dialog>
+  );
+}
