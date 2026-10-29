@@ -38,6 +38,11 @@
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#F0F4F9"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9b79af40-d167-40f0-8294-0c514b76400a"
+      }
     }
   }
 }
