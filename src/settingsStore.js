@@ -32,6 +32,7 @@ const createInitial = () => ({
   remindersOn: true,
   defaultReminders: DEFAULT_REMINDERS,
   askedForReminders: false,
+  smsSeen: [], // text message IDs already reviewed, so they aren't suggested again
 });
 
 export function normalizeSettings(saved) {

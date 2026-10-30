@@ -230,6 +230,9 @@ function Root() {
                 calendarDispatch={calendarDispatch}
                 tasks={tasks}
                 properties={properties}
+                settings={settings}
+                settingsDispatch={settingsDispatch}
+                appOpenedAt={appOpenedAt}
                 nav={nav}
                 showMessage={showMessage}
               />

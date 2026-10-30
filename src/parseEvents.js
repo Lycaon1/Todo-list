@@ -11,6 +11,7 @@ const MONTH = '(january|february|march|april|may|june|july|august|september|octo
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const DAY = '(sunday|monday|tuesday|wednesday|thursday|friday|saturday)';
 const TIME = '(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?';
+const DAY_PREFIX = '(?:(?:on\\s+)?(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday),?\\s+(?:the\\s+)?)?';
 
 const NUMBER_WORDS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
 const NUMBER = `(\\d+|${Object.keys(NUMBER_WORDS).join('|')})`;
@@ -35,7 +36,7 @@ function normalize(text) {
     .replace(/[“”]/g, '"')
     .replace(/\b([ap])\.\s?m\b\.?/gi, '$1m')
     .replace(/\b(dr|mr|mrs|ms|st|jr|sr|ave|mt|prof)\./gi, '$1')
-    .replace(/(\d)\.(\d{2})\b/g, '$1:$2')
+    .replace(/(^|[^\d$₹£€.,])(\d{1,2})\.(\d{2})\b/g, '$1$2:$3')
     .replace(/\bo'?clock\b/gi, '')
     .replace(/\b(twenty|thirty)[\s-]+(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)\b/gi, '$1-$2')
     .replace(new RegExp(`\\b${ORDINAL}\\b`, 'gi'), (w) => `${ORDINAL_VALUES[w.toLowerCase()]}th`)
@@ -97,12 +98,12 @@ function makeTaker(text) {
 // Finds one date phrase. Returns { key, year, monthOnly } or null.
 function takeDate(t, today, dayFirst) {
   const now = fromKey(today);
-  let m = t.take(new RegExp(`\\b${MONTH}\\.?\\s+(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s*(\\d{4}))?`, 'i'));
+  let m = t.take(new RegExp(`${DAY_PREFIX}\\b${MONTH}\\.?\\s+(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s*(\\d{4}))?`, 'i'));
   if (m) {
     const year = m[3] ? Number(m[3]) : null;
     return { key: validKey(year ?? now.getFullYear(), MONTH_INDEX[m[1].toLowerCase()], Number(m[2])), year };
   }
-  m = t.take(new RegExp(`\\b(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH}\\b(?:,?\\s*(\\d{4}))?`, 'i'));
+  m = t.take(new RegExp(`${DAY_PREFIX}\\b(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH}\\b(?:,?\\s*(\\d{4}))?`, 'i'));
   if (m) {
     const year = m[3] ? Number(m[3]) : null;
     return { key: validKey(year ?? now.getFullYear(), MONTH_INDEX[m[2].toLowerCase()], Number(m[1])), year };
@@ -117,7 +118,7 @@ function takeDate(t, today, dayFirst) {
   }
   if (t.take(/\b(?:the\s+)?day\s+after\s+tomorrow\b/i)) return { key: shiftKey(today, { days: 2 }), relative: true };
   if (t.take(/\b(?:tomorrow|tmrw|tmr)\b/i)) return { key: shiftKey(today, { days: 1 }), relative: true };
-  if (t.take(/\b(?:today|tonight|this evening|this afternoon|this morning)\b/i)) return { key: today, relative: true };
+  if (t.take(/\b(?:today|tonight|this evening|this afternoon|this morning|this week)\b/i)) return { key: today, relative: true };
   m = t.take(new RegExp(`\\bin\\s+${NUMBER}\\s+(days?|weeks?|months?)\\b`, 'i'));
   if (m) {
     const n = toNumber(m[1]);
@@ -151,9 +152,10 @@ function takeDate(t, today, dayFirst) {
 const CATEGORY_PATTERNS = [
   ['birthday', /\b(birthday|b-day|bday)\b/i],
   ['anniversary', /\banniversary\b/i],
-  ['appointment', /\b(doctor|dentist|appointment|appt|check-?up|clinic|hospital|vet|therapy|physio|surgery)\b/i],
-  ['kids', /\b(school|class|practice|lesson|tuition|tutor|recital|game|match|pick ?up|drop ?off|soccer|football|cricket|swim(?:ming)?|dance|piano|karate|ballet|homework|exam|ptm|parent[\s-]teacher|field trip|camp|kids?|son|daughter)\b/i],
-  ['property', /\b(tenant|rent|lease|repair|plumber|electrician|inspection|property|landlord|maintenance|contractor|property tax)\b/i],
+  ['appointment', /\b(doctor|dr|dentist|dental|appointment|appt|check-?up|clinic|hospital|vet|therapy|therapist|physio|surgery|pediatrician|optometrist|eye exam|lab test|blood test|scan|x-ray|vaccin\w*|consultation|salon|haircut)\b/i],
+  ['kids', /\b(school|class|practice|lesson|tuition|tutor|recital|game|match|pick ?up|drop ?off|soccer|football|cricket|basketball|swim(?:ming)?|dance|piano|guitar|karate|ballet|homework|exam|ptm|pta|parent[\s-]teacher|teacher|report card|uniform|field trip|camp|play ?date|kids?|son|daughter|children)\b/i],
+  ['property', /\b(tenants?|rent|lease|repairs?|plumber|plumbing|electrician|hvac|roof|pest control|inspection|property|landlord|maintenance|contractor|unit \w+|property tax)\b/i],
+  ['bills', /\b(bill|invoice|payment|amount due|due amount|emi|premium|insurance|subscription|renewal|renew|credit card|statement|utility|electricity|water bill|gas bill|internet bill|phone bill|tax)\b/i],
 ];
 
 function cleanTitle(text, category) {
@@ -164,7 +166,7 @@ function cleanTitle(text, category) {
   for (let i = 0; i < 6 && intro.test(t); i++) t = t.replace(intro, '').trim();
   t = t.replace(/^(?:a|an)\s+/i, '');
   for (let i = 0; i < 4; i++) t = t.replace(/\b(?:on|at|from|by|for)\s+(?=(?:on|at|from|by|for)\b|,|$)/gi, '').trim();
-  const trailing = /[\s,:;-]*\b(?:on|at|from|every|each|is|are|was|and|the|for|in|of|by|this|next|starting|beginning|which|that|it|will be|be|until|till|around|between|with)\s*$/i;
+  const trailing = /[\s,:;-]*\b(?:on|at|from|every|each|is|are|was|and|the|for|in|of|by|this|next|starting|beginning|which|that|it|will be|be|until|till|around|between|with|to)\s*$/i;
   for (let i = 0; i < 6 && trailing.test(t); i++) t = t.replace(trailing, '').trim();
   t = t.replace(/^(?:on|at|is|for|the|and)\s+/i, '');
   t = t.replace(/\s+,/g, ',').replace(/^[\s,:;-]+|[\s,:;-]+$/g, '').replace(/\s{2,}/g, ' ');
@@ -313,8 +315,15 @@ function parseSentence(sentence, today, dayFirst) {
 }
 
 // Returns a list of events found in the text (one per sentence)
-export function parseEvents(text, { now = new Date(), dayFirst = false } = {}) {
+// single: read the whole text as one item (used for text messages) and title it from its first sentence
+export function parseEvents(text, { now = new Date(), dayFirst = false, single = false } = {}) {
   const today = toKey(now);
+  if (single) {
+    const event = parseSentence(normalize(text).replace(/\s+/g, ' '), today, dayFirst);
+    const first = event.title.split(/[.!?]+(?:\s+|$)/).find((part) => /[a-z]/i.test(part));
+    event.title = cleanTitle(first ?? '', event.category);
+    return [event];
+  }
   return normalize(text)
     .split(/[.!?;\n]+|\s+(?:and then|and also|also)\s+/i)
     .map((s) => s.trim())

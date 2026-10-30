@@ -1,6 +1,6 @@
 import { usePersistentReducer } from './storage';
 import { uid } from './store';
-import { DAYS_SHORT, MONTHS_SHORT, formatLongDate, fromKey } from './dates';
+import { DAYS_SHORT, MONTHS_SHORT, addDays, formatLongDate, fromKey } from './dates';
 import { ordinal } from './propertyStore';
 
 export const EVENT_CATEGORIES = [
@@ -10,6 +10,7 @@ export const EVENT_CATEGORIES = [
   { value: 'appointment', label: 'Appointment', icon: 'medical-services' },
   { value: 'kids', label: 'Kids & school', icon: 'school' },
   { value: 'property', label: 'Property', icon: 'apartment' },
+  { value: 'bills', label: 'Bills & payments', icon: 'receipt-long' },
 ];
 
 export const EVENT_REPEATS = [
@@ -74,6 +75,18 @@ export function occursOn(event, key) {
     default:
       return key === event.date;
   }
+}
+
+// The first date on or after `from` when the event happens, or null if it never does again
+export function nextOccurrence(event, from, maxDays = 400) {
+  let key = event.date > from ? event.date : from;
+  for (let i = 0; i < maxDays; i++) {
+    if (event.until && key > event.until) return null;
+    if (occursOn(event, key)) return key;
+    if (!event.repeat) return null;
+    key = addDays(key, 1);
+  }
+  return null;
 }
 
 export function describeRepeat(event) {

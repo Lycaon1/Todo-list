@@ -39,6 +39,7 @@ const light = {
     property: '#5F6368',
     task: '#1A73E8',
     lease: '#B06000',
+    bills: '#00796B',
   },
 };
 
@@ -81,6 +82,7 @@ const dark = {
     property: '#BDC1C6',
     task: '#8AB4F8',
     lease: '#FCAD70',
+    bills: '#80CBC4',
   },
 };
 
